@@ -1,0 +1,9 @@
+docker start -i container_name
+
+apt-get update
+
+apt-get -y install nano
+
+nano /usr/src/app/index.js
+
+// saved console.log("Hello world")
