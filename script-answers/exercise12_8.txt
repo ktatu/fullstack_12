@@ -1,4 +1,4 @@
-docker compose -f docker-compose-mongo.yml up -d
+docker compose -f docker-compose-dev.yml up -d
 
 docker exec -it 8a4be101ca97 bash
 
