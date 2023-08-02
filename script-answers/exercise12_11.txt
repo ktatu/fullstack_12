@@ -1,0 +1,11 @@
+docker exec -it a07ab69a2404 bash
+
+redis-cli
+
+KEYS *
+
+GET todos_counter
+
+SET todos_counter 9001
+
+DEL todos_counter
