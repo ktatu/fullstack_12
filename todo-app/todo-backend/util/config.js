@@ -1,7 +1,10 @@
 //const MONGO_URL = process.env.MONGO_URL || undefined
 const REDIS_URL = process.env.REDIS_URL || undefined
+const MONGO_URL = process.env.MONGO_URL || undefined
+
+console.log("MONGO URL ", MONGO_URL)
 
 module.exports = {
-    MONGO_URL: "mongodb://ktatu:ktatu@localhost:3456/the_database",
-    REDIS_URL: "redis://localhost:6379",
+    MONGO_URL,
+    REDIS_URL,
 }
