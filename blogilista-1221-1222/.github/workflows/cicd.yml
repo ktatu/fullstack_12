@@ -1,0 +1,82 @@
+name: Continuous integration & Deployment
+
+on:
+  push:
+      branches:
+        - main
+  pull_request:
+      branches: [main]
+      types: [opened, synchronize]
+  
+env:
+    MONGODB_URI: ${{ secrets.MONGODB_URI }}
+    TEST_MONGODB_URI: ${{ secrets.TEST_MONGODB_URI }}
+    SECRET: ${{ secrets.SECRET }}
+    SKIP_DEPLOY: ${{ contains(join(toJson(github.event.commits)), '#skip') }}
+
+jobs:
+        
+  cicd_pipeline:
+    runs-on: ubuntu-20.04
+    steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-node@v3
+          with:
+              node-version: "16.13.0"
+        - name: Install frontend dependencies
+          run: npm ci --workspace=frontend
+        - name: Check style frontend
+          run: npm run lint --workspace=frontend
+        - name: Build
+          run: npm run build --workspace=frontend
+        - name: Frontend tests
+          run: npm run test:nowatch --workspace=frontend
+        - name: Install backend dependencies
+          run: npm ci --workspace=backend
+        - name: Check style backend
+          run: npm run lint --workspace=backend
+        - name: Backend tests
+          run: npm run test --workspace=backend
+        - name: Start backend
+          run: npm run start:test &
+          working-directory: backend
+        - name: Run end to end tests
+          uses: cypress-io/github-action@v5
+          with:
+            command: npm run test:e2e
+            start: npm run start:frontend
+            wait-on: "http://localhost:3000"
+        - name: Deploy to Render
+          uses: JorgeLNJunior/render-deploy@354f5b345ec066cc9b78e387040cf5b3478578b5
+          if: ${{ github.event_name == 'push' && env.SKIP_DEPLOY == 'false' }}
+          with:
+            service_id: ${{ secrets.RENDER_SERVICE_ID }}
+            api_key: ${{ secrets.RENDER_API_KEY }}
+            wait_deploy: true
+        - name: Discord success notification
+          if: ${{ success() && github.event_name == 'push' && env.SKIP_DEPLOY == 'false' }}
+          uses: rjstone/discord-webhook-notify@89b0bf43c2c8514f70d0dcba4a706b904e8a3112
+          with:
+            severity: info
+            description: New version deployed to https://ktatu-11-20.onrender.com/ by ${{ github.actor }}
+            webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+        - name: Discord failure notification
+          if: ${{ failure() && github.event_name == 'push' }}
+          uses: rjstone/discord-webhook-notify@89b0bf43c2c8514f70d0dcba4a706b904e8a3112
+          with:
+            severity: error
+            details: Failure in ci/cd pipeline
+            webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+    
+  tag_release:
+    runs-on: ubuntu-20.04
+    needs: [cicd_pipeline]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bump version
+        if: ${{ success() && github.event_name == 'push' && env.SKIP_DEPLOY == 'false' }}
+        uses: anothrNick/github-tag-action@1.61.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: 'patch'

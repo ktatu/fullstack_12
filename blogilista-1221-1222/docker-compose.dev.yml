@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+    frontend:
+        image: 1120-front
+        volumes:
+            - ./frontend:/usr/src/app
+            - node_modules-frontend:/usr/src/app/node_modules
+        environment:
+            - DANGEROUSLY_DISABLE_HOST_CHECK=true
+
+    backend:
+        image: 1120-back
+        volumes:
+            - ./backend:/usr/src/app
+            - node_modules-backend:/usr/src/app/node_modules
+        env_file: ./backend/.env
+
+    nginx:
+        image: nginx
+        ports:
+            - 8080:80
+        volumes:
+            - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+        depends_on:
+            - frontend
+            - backend
+
+volumes:
+    node_modules-frontend:
+    node_modules-backend:
